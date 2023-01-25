@@ -24,9 +24,9 @@ Then, once you're in game, press O to toggle the menu.
 
 *Demo :eyes:  :*
 
-[Video](https://streamable.com/ex9lfp)
+[Video](https://streamable.com/104ck4)
 
-https://streamable.com/ex9lfp
+https://streamable.com/104ck4
 
 **Link to the resource :** [mathu-lmn/mth-K9 (github.com)](https://github.com/Mathu-lmn/mth-K9)
 
