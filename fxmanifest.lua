@@ -1,12 +1,10 @@
 fx_version 'adamant'
 game 'gta5'
 
-name "mth-effects"
-description "Developer script to play every GTA effects"
+name "mth-K9"
+description "Menu to spawn and manage your K9"
 author "Mathu_lmn"
 version "1.0.0"
-
-files {'config.json'}
 
 client_scripts {
     'RageUI/RMenu.lua',
