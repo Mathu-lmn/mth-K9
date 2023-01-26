@@ -73,6 +73,11 @@ function openK9Menu()
                                     SetPedCombatAttributes(k9, 3, true)
                                     SetPedCombatAttributes(k9, 5, true)
                                     SetPedCombatAttributes(k9, 46, true)
+                                    -- make it not attack the owner in any condition
+                                    SetPedAsGroupLeader(k9, GetPedGroupIndex(PlayerPedId()))
+                                    SetPedAsGroupMember(k9, GetPedGroupIndex(PlayerPedId()))
+                                    SetPedNeverLeavesGroup(k9, true)
+
 
                                     blipk9 = AddBlipForEntity(k9)
                                     SetBlipAsFriendly(blipk9, true)
@@ -95,8 +100,8 @@ function openK9Menu()
                             ShowNotification(k9Name .. " was killed!")
                             k9 = nil
                             k9Name = nil
-                            blipk9 = nil
                             RemoveBlip(blipk9)
+                            blipk9 = nil
                         end
 
                         RageUI.Button("Sit", nil, { RightLabel = "→" }, true, {
@@ -192,7 +197,7 @@ function attackK9(ped)
     if IsPlayerFreeAiming(PlayerId()) then
         local _, target = GetEntityPlayerIsFreeAimingAt(PlayerId())
         ClearPedTasks(ped)
-        if IsEntityAPed(target) then
+        if IsEntityAPed(target) and target ~= PlayerPedId() then
             isAttacking = true
             TaskCombatPed(ped, target, 0, 16)
             CreateThread(function()
@@ -205,7 +210,7 @@ function attackK9(ped)
     else
         local target = GetPedInFront()
         ClearPedTasks(ped)
-        if IsEntityAPed(target) then
+        if IsEntityAPed(target) and target ~= PlayerPedId() then
             isAttacking = true
             TaskCombatPed(ped, target, 0, 16)
 
@@ -248,7 +253,7 @@ function select_and_attackK9(ped)
     end
     ClearPedTasks(ped)
 
-    if IsEntityAPed(target) then
+    if IsEntityAPed(target) and target ~= PlayerPedId() then
         isAttacking = true
         TaskCombatPed(ped, target, 0, 16)
 
