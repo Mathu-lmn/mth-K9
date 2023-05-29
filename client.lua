@@ -1,9 +1,3 @@
--- CONFIG --
-
-local config_select = true -- true = select the target, false = auto target the player in front
-
--- END OF CONFIG --
-
 local dogBreeds = { 'Rottweiler', 'Husky', 'Retriever', 'Shepherd' }
 local dogBHash = { 'a_c_rottweiler', 'a_c_husky', 'a_c_retriever', 'a_c_shepherd' }
 
@@ -56,54 +50,13 @@ function openK9Menu()
                                     ShowNotification("You have to name your dog first!")
                                 else
                                     -- Spawning
-                                    RequestModel(GetHashKey(dogBHash[currentDogIndex]))
-                                    while not HasModelLoaded(GetHashKey(dogBHash[currentDogIndex])) do
-                                        Citizen.Wait(1)
-                                    end
-
                                     local pos = GetOffsetFromEntityInWorldCoords(PlayerPedId(), 0.0, 2.0, 0.0)
-                                    local heading = GetEntityHeading(GetPlayerPed(-1))
-                                    local _, groundZ = GetGroundZFor_3dCoord(pos.x, pos.y, pos.z, false);
 
-                                    k9 = CreatePed(28, GetHashKey(dogBHash[currentDogIndex]), pos.x, pos.y, groundZ + 1, heading, true, true)
-
-                                    GiveWeaponToPed(k9, GetHashKey('WEAPON_ANIMAL'), true, true)
-                                    TaskSetBlockingOfNonTemporaryEvents(k9, true)
-                                    SetPedFleeAttributes(k9, 0, false)
-                                    SetPedCombatAttributes(k9, 3, true)
-                                    SetPedCombatAttributes(k9, 5, true)
-                                    SetPedCombatAttributes(k9, 46, true)
-                                    -- make it not attack the owner in any condition
-                                    SetPedAsGroupLeader(k9, GetPedGroupIndex(PlayerPedId()))
-                                    SetPedAsGroupMember(k9, GetPedGroupIndex(PlayerPedId()))
-                                    SetPedNeverLeavesGroup(k9, true)
-
-
-                                    blipk9 = AddBlipForEntity(k9)
-                                    SetBlipAsFriendly(blipk9, true)
-                                    SetBlipDisplay(blipk9, 2)
-                                    SetBlipShowCone(blipk9, true)
-                                    SetBlipAsShortRange(blipk9, false)
-
-                                    BeginTextCommandSetBlipName("STRING")
-                                    AddTextComponentString(k9Name)
-                                    EndTextCommandSetBlipName(blipk9)
-
-                                    Command_Follow(k9)
-
+                                    TriggerServerEvent('mth-k9:server:spawn', dogBHash[currentDogIndex], pos)
                                 end
                             end,
                         })
-
                     else
-                        if IsPedDeadOrDying(k9, true) then
-                            ShowNotification(k9Name .. " was killed!")
-                            k9 = nil
-                            k9Name = nil
-                            RemoveBlip(blipk9)
-                            blipk9 = nil
-                        end
-
                         RageUI.Button("Sit", nil, { RightLabel = "→" }, true, {
                             onSelected = function()
                                 Command_Sit(k9)
@@ -152,7 +105,7 @@ function openK9Menu()
                                     isAttacking = false
                                     ClearPedTasksImmediately(k9)
                                 else
-                                    if config_select then
+                                    if Config.Select then
                                         select_and_attackK9(k9)
                                     else
                                         attackK9(k9)
@@ -186,7 +139,72 @@ function openK9Menu()
     end
 end
 
-Keys.Register('O', 'O', 'Menu K9', function()
+RegisterNetEvent('mth-k9:client:spawn')
+AddEventHandler('mth-k9:client:spawn', function(dog)
+    -- get network control
+    NetworkRequestControlOfNetworkId(dog)
+    repeat
+        Wait(1)
+    until NetworkHasControlOfNetworkId(dog)
+
+    k9 = NetToPed(dog)
+
+    SetEntityAsMissionEntity(k9, true, true)
+    GiveWeaponToPed(k9, GetHashKey('WEAPON_ANIMAL'), true, true)
+    TaskSetBlockingOfNonTemporaryEvents(k9, true)
+    SetPedFleeAttributes(k9, 0, false)
+    SetPedCombatAttributes(k9, 3, true)
+    SetPedCombatAttributes(k9, 5, true)
+    SetPedCombatAttributes(k9, 46, true)
+    -- make it not attack the owner in any condition
+    SetPedAsGroupLeader(k9, GetPedGroupIndex(PlayerPedId()))
+    SetPedAsGroupMember(k9, GetPedGroupIndex(PlayerPedId()))
+    SetPedNeverLeavesGroup(k9, true)
+
+    blipk9 = AddBlipForEntity(k9)
+    SetBlipAsFriendly(blipk9, true)
+    SetBlipDisplay(blipk9, 2)
+    SetBlipShowCone(blipk9, true)
+    SetBlipAsShortRange(blipk9, false)
+
+    Command_Follow(k9)
+    InitLoop()
+end)
+
+
+function InitLoop()
+    Citizen.CreateThread(function()
+        while k9 do
+            if IsEntityDead(k9) then
+                ShowNotification(k9Name .. " was killed!")
+                k9 = nil
+                k9Name = nil
+                RemoveBlip(blipk9)
+                blipk9 = nil
+            elseif IsEntityDead(PlayerPedId()) then
+                DeleteEntity(k9)
+                k9 = nil
+                k9Name = nil
+                RemoveBlip(blipk9)
+                blipk9 = nil
+            end
+            if not NetworkHasControlOfEntity(k9) then
+                NetworkRequestControlOfEntity(k9)
+            end
+            Wait(1000)
+        end
+    end)
+end
+
+
+if Config.UseKeybind then
+    Keys.Register('O', 'O', 'Menu K9', function()
+        TriggerEvent('mth-k9:openMenu')
+    end)
+end
+
+RegisterNetEvent('mth-k9:openMenu')
+AddEventHandler('mth-k9:openMenu', function()
     openK9Menu()
 end)
 
@@ -267,7 +285,6 @@ function select_and_attackK9(ped)
 end
 
 function Command_Sit(ped)
-
     ClearPedTasks(ped)
 
     RequestAnimDict("creatures@rottweiler@amb@world_dog_sitting@idle_a")
@@ -275,11 +292,9 @@ function Command_Sit(ped)
         Citizen.Wait(1)
     end
     TaskPlayAnim(ped, "creatures@rottweiler@amb@world_dog_sitting@idle_a", "idle_b", 8.0, -4.0, -1, 1, 0.0)
-
 end
 
 function Command_Stay(ped)
-
     ClearPedTasks(ped)
 
     RequestAnimDict("amb@lo_res_idles@")
@@ -287,11 +302,9 @@ function Command_Stay(ped)
         Citizen.Wait(1)
     end
     TaskPlayAnim(ped, "amb@lo_res_idles@", "creatures_world_rottweiler_standing_lo_res_base", 8.0, -4.0, -1, 1, 0.0)
-
 end
 
 function Command_paw(ped)
-
     ClearPedTasks(ped)
 
     RequestAnimDict("creatures@rottweiler@tricks@")
@@ -299,11 +312,9 @@ function Command_paw(ped)
         Citizen.Wait(1)
     end
     TaskPlayAnim(ped, "creatures@rottweiler@tricks@", "paw_right_loop", 8.0, -4.0, -1, 1, 0.0)
-
 end
 
 function Command_beg(ped)
-
     ClearPedTasks(ped)
 
     RequestAnimDict("creatures@rottweiler@tricks@")
@@ -311,20 +322,16 @@ function Command_beg(ped)
         Citizen.Wait(1)
     end
     TaskPlayAnim(ped, "creatures@rottweiler@tricks@", "beg_loop", 8.0, -4.0, -1, 1, 0.0)
-
 end
 
 function Command_Follow(ped)
-
     ClearPedTasks(ped)
     DetachEntity(ped)
 
     TaskFollowToOffsetOfEntity(ped, GetPlayerPed(-1), 0.5, 0.0, 0.0, 7.0, -1, 0.2, true)
-
 end
 
 function Command_Bark(ped)
-
     ClearPedTasks(ped)
 
     RequestAnimDict("creatures@rottweiler@amb@world_dog_barking@idle_a")
@@ -332,7 +339,6 @@ function Command_Bark(ped)
         Citizen.Wait(1)
     end
     TaskPlayAnim(ped, "creatures@rottweiler@amb@world_dog_barking@idle_a", "idle_a", 8.0, -4.0, -1, 1, 0.0)
-
 end
 
 function Command_Lay(ped)
@@ -343,21 +349,16 @@ function Command_Lay(ped)
         Citizen.Wait(1)
     end
     TaskPlayAnim(ped, "creatures@rottweiler@amb@sleep_in_kennel@", "sleep_in_kennel", 8.0, -4.0, -1, 1, 0.0)
-
 end
 
 function Command_StartTrack(dog, player)
-
     local target = GetPlayerPed(GetPlayerFromServerId(tonumber(player)))
 
     TaskFollowToOffsetOfEntity(dog, target, 0.5, 0.0, 0.0, 6.0, -1, 0.2, true)
-
 end
 
 function EnterVehicle(ped)
-
     if IsPedInAnyVehicle(PlayerPedId(), false) then
-
         ClearPedTasks(ped)
 
         local vehicle = GetVehiclePedIsIn(PlayerPedId(), false)
@@ -379,15 +380,12 @@ function EnterVehicle(ped)
         ClearPedTasks(ped)
         AttachEntityToEntity(ped, vehicle, GetEntityBoneIndexByName(vehicle, "seat_pside_r"), 0.0, 0.0, 0.25)
         TaskPlayAnim(ped, "creatures@rottweiler@amb@world_dog_sitting@base", "base", 8.0, -4.0, -1, 2, 0.0)
-
     else
         ShowNotification("You have to be in a vehicle to do that!")
     end
-
 end
 
 function ExitVehicle(ped)
-
     local vehicle = GetEntityAttachedTo(ped)
     local vehPos = GetEntityCoords(vehicle)
     local forwardX = GetEntityForwardVector(vehicle).x * 3.7
@@ -400,11 +398,9 @@ function ExitVehicle(ped)
     SetEntityCoords(ped, vehPos.x - forwardX, vehPos.y - forwardY, groundZ)
 
     Command_Follow(ped)
-
 end
 
 function DismissDog(ped)
-
     ClearPedTasks(ped)
 
     DeletePed(ped)
@@ -413,18 +409,6 @@ function DismissDog(ped)
     k9 = nil
     k9Name = nil
     RemoveBlip(blipk9)
-
-end
-
-function GetPedInFront()
-    local player = PlayerId()
-    local plyPed = GetPlayerPed(player)
-    local plyPos = GetEntityCoords(plyPed, false)
-    local plyOffset = GetOffsetFromEntityInWorldCoords(plyPed, 0.0, 5.0, 0.0)
-    local rayHandle = StartShapeTestCapsule(plyPos.x, plyPos.y, plyPos.z, plyOffset.x, plyOffset.y, plyOffset.z, 1.0, 12
-        , plyPed, 7)
-    local _, _, _, _, ped = GetShapeTestResult(rayHandle)
-    return ped
 end
 
 function StartChoicePlayerK9(players)
@@ -463,42 +447,4 @@ function StartChoicePlayerK9(players)
         end
         Wait(0)
     end
-end
-
-function KeyboardInput(text)
-	local result = nil
-	AddTextEntry("CUSTOM_AMOUNT", text)
-	DisplayOnscreenKeyboard(1, "CUSTOM_AMOUNT", '', "", '', '', '', 255)
-	while UpdateOnscreenKeyboard() ~= 1 and UpdateOnscreenKeyboard() ~= 2 do
-		Wait(1)
-	end
-	if UpdateOnscreenKeyboard() ~= 2 then
-		result = GetOnscreenKeyboardResult()
-		Citizen.Wait(1)
-	else
-		Citizen.Wait(1)
-	end
-	return result
-end
-
-function ShowNotification(text)
-	AddTextEntry('core:notif', text)
-	BeginTextCommandThefeedPost('core:notif')
-	AddTextComponentSubstringPlayerName(text)
-	EndTextCommandThefeedPostTicker(true, true)
-end
-
-function GetAllPlayersInArea(coords, zone)
-	local playersInArea = {}
-	if zone == nil then
-		zone = 150.0
-	end
-	for k, v in pairs(GetActivePlayers()) do
-		local pPed = GetPlayerPed(v)
-		local pCoords = GetEntityCoords(pPed)
-		if GetDistanceBetweenCoords(pCoords, coords, false) <= zone then
-			table.insert(playersInArea, v)
-		end
-	end
-	return playersInArea
 end
