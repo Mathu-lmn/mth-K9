@@ -6,6 +6,8 @@ local k9Name = nil
 
 local blipk9 = nil
 
+local isDogInVehicle = false
+
 local selectedDogIndex = 1
 local currentDogIndex = 1
 
@@ -139,6 +141,11 @@ function openK9Menu()
     end
 end
 
+RegisterNetEvent('mth-k9:openMenu')
+AddEventHandler('mth-k9:openMenu', function()
+    openK9Menu()
+end)
+
 RegisterNetEvent('mth-k9:client:spawn')
 AddEventHandler('mth-k9:client:spawn', function(dog)
     -- get network control
@@ -196,18 +203,6 @@ function InitLoop()
     end)
 end
 
-
-if Config.UseKeybind then
-    Keys.Register('O', 'O', 'Menu K9', function()
-        TriggerEvent('mth-k9:openMenu')
-    end)
-end
-
-RegisterNetEvent('mth-k9:openMenu')
-AddEventHandler('mth-k9:openMenu', function()
-    openK9Menu()
-end)
-
 local isAttacking = false
 function attackK9(ped)
     DetachEntity(ped)
@@ -241,6 +236,11 @@ function attackK9(ped)
         end
     end
 end
+
+RegisterNetEvent('mth-k9:attack')
+AddEventHandler('mth-k9:attack', function()
+    attackK9(k9)
+end)
 
 function select_and_attackK9(ped)
     DetachEntity(ped)
@@ -294,6 +294,11 @@ function Command_Sit(ped)
     TaskPlayAnim(ped, "creatures@rottweiler@amb@world_dog_sitting@idle_a", "idle_b", 8.0, -4.0, -1, 1, 0.0)
 end
 
+RegisterNetEvent('mth-k9:sit')
+AddEventHandler('mth-k9:sit', function()
+    Command_Sit(k9)
+end)
+
 function Command_Stay(ped)
     ClearPedTasks(ped)
 
@@ -303,6 +308,11 @@ function Command_Stay(ped)
     end
     TaskPlayAnim(ped, "amb@lo_res_idles@", "creatures_world_rottweiler_standing_lo_res_base", 8.0, -4.0, -1, 1, 0.0)
 end
+
+RegisterNetEvent('mth-k9:stay')
+AddEventHandler('mth-k9:stay', function()
+    Command_Stay(k9)
+end)
 
 function Command_paw(ped)
     ClearPedTasks(ped)
@@ -314,6 +324,11 @@ function Command_paw(ped)
     TaskPlayAnim(ped, "creatures@rottweiler@tricks@", "paw_right_loop", 8.0, -4.0, -1, 1, 0.0)
 end
 
+RegisterNetEvent('mth-k9:paw')
+AddEventHandler('mth-k9:paw', function()
+    Command_paw(k9)
+end)
+
 function Command_beg(ped)
     ClearPedTasks(ped)
 
@@ -324,12 +339,22 @@ function Command_beg(ped)
     TaskPlayAnim(ped, "creatures@rottweiler@tricks@", "beg_loop", 8.0, -4.0, -1, 1, 0.0)
 end
 
+RegisterNetEvent('mth-k9:beg')
+AddEventHandler('mth-k9:beg', function()
+    Command_beg(k9)
+end)
+
 function Command_Follow(ped)
     ClearPedTasks(ped)
     DetachEntity(ped)
 
     TaskFollowToOffsetOfEntity(ped, GetPlayerPed(-1), 0.5, 0.0, 0.0, 7.0, -1, 0.2, true)
 end
+
+RegisterNetEvent('mth-k9:follow')
+AddEventHandler('mth-k9:follow', function()
+    Command_Follow(k9)
+end)
 
 function Command_Bark(ped)
     ClearPedTasks(ped)
@@ -341,6 +366,11 @@ function Command_Bark(ped)
     TaskPlayAnim(ped, "creatures@rottweiler@amb@world_dog_barking@idle_a", "idle_a", 8.0, -4.0, -1, 1, 0.0)
 end
 
+RegisterNetEvent('mth-k9:bark')
+AddEventHandler('mth-k9:bark', function()
+    Command_Bark(k9)
+end)
+
 function Command_Lay(ped)
     ClearPedTasks(ped)
 
@@ -350,6 +380,11 @@ function Command_Lay(ped)
     end
     TaskPlayAnim(ped, "creatures@rottweiler@amb@sleep_in_kennel@", "sleep_in_kennel", 8.0, -4.0, -1, 1, 0.0)
 end
+
+RegisterNetEvent('mth-k9:lay')
+AddEventHandler('mth-k9:lay', function()
+    Command_Lay(k9)
+end)
 
 function Command_StartTrack(dog, player)
     local target = GetPlayerPed(GetPlayerFromServerId(tonumber(player)))
@@ -385,6 +420,12 @@ function EnterVehicle(ped)
     end
 end
 
+RegisterNetEvent('mth-k9:enterVeh')
+AddEventHandler('mth-k9:enterVeh', function()
+    EnterVehicle(k9)
+    isDogInVehicle = true
+end)
+
 function ExitVehicle(ped)
     local vehicle = GetEntityAttachedTo(ped)
     local vehPos = GetEntityCoords(vehicle)
@@ -400,6 +441,12 @@ function ExitVehicle(ped)
     Command_Follow(ped)
 end
 
+RegisterNetEvent('mth-k9:exitVeh')
+AddEventHandler('mth-k9:exitVeh', function()
+    ExitVehicle(k9)
+    isDogInVehicle = false
+end)
+
 function DismissDog(ped)
     ClearPedTasks(ped)
 
@@ -410,6 +457,11 @@ function DismissDog(ped)
     k9Name = nil
     RemoveBlip(blipk9)
 end
+
+RegisterNetEvent('mth-k9:dismiss')
+AddEventHandler('mth-k9:dismiss', function()
+    DismissDog(k9)
+end)
 
 function StartChoicePlayerK9(players)
     selectedPlayer = nil
@@ -447,4 +499,44 @@ function StartChoicePlayerK9(players)
         end
         Wait(0)
     end
+end
+
+if Config.UseKeybind then
+    Keys.Register(Config.Keybinds.Menu, Config.Keybinds.Menu, 'K9 Menu', function()
+        TriggerEvent('mth-k9:openMenu')
+    end)
+    Keys.Register(Config.Keybinds.Attack, Config.Keybinds.Attack, 'K9 Attack', function()
+        TriggerEvent('mth-k9:attack')
+    end)
+    Keys.Register(Config.Keybinds.Sit, Config.Keybinds.Sit, 'K9 Sit', function()
+        TriggerEvent('mth-k9:sit')
+    end)
+    Keys.Register(Config.Keybinds.Stay, Config.Keybinds.Stay, 'K9 Stay', function()
+        TriggerEvent('mth-k9:stay')
+    end)
+    Keys.Register(Config.Keybinds.Follow, Config.Keybinds.Beg, 'K9 Beg', function()
+        TriggerEvent('mth-k9:beg')
+    end)
+    Keys.Register(Config.Keybinds.Paw, Config.Keybinds.Paw, 'K9 Paw', function()
+        TriggerEvent('mth-k9:paw')
+    end)
+    Keys.Register(Config.Keybinds.Follow, Config.Keybinds.Follow, 'K9 Follow', function()
+        TriggerEvent('mth-k9:follow')
+    end)
+    Keys.Register(Config.Keybinds.Bark, Config.Keybinds.Bark, 'K9 Bark', function()
+        TriggerEvent('mth-k9:bark')
+    end)
+    Keys.Register(Config.Keybinds.Lay, Config.Keybinds.Lay, 'K9 Lay', function()
+        TriggerEvent('mth-k9:lay')
+    end)
+    Keys.Register(Config.Keybinds.EnterExitVehicle, Config.Keybinds.EnterExitVehicle, 'K9 Enter/Exit Vehicle', function()
+        if isDogInVehicle == true then
+            TriggerEvent('mth-k9:exitVeh')
+        elseif isDogInVehicle == false then
+            TriggerEvent('mth-k9:enterVeh')
+        end
+    end)
+    Keys.Register(Config.Keybinds.Dismiss, Config.Keybinds.Dismiss, 'K9 Dismiss', function()
+        TriggerEvent('mth-k9:dismiss')
+    end)
 end
