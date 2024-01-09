@@ -6,6 +6,7 @@ end
 
 RegisterNetEvent('mth-k9:server:spawn')
 AddEventHandler('mth-k9:server:spawn', function(model, pos)
+    local source = source
     local ped = CreatePed(0, model, pos.x, pos.y, pos.z, 0.0, true, true)
     while not DoesEntityExist(ped) do
         Wait(50)
